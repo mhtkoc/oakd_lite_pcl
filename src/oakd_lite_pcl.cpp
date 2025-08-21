@@ -5,9 +5,12 @@
 #include <pcl/point_types.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/common/transforms.h>
 #include <opencv2/opencv.hpp>
 #include <algorithm>
 #include <random>
+#include <cmath>
+#include <Eigen/Geometry>
 
 #include "depthai/depthai.hpp"
 
@@ -123,20 +126,55 @@ private:
                 float depth = depth_downsampled.at<float>(v, u);
                 
                 // Filter invalid depths
-                if (depth > 0.01 && depth < 2.0) {
+                if (depth > 0.01 && depth < 3.0) {
+                    // Z = derinlik (ileri), Y = yükseklik (aşağı pozitif), X = genişlik (sağa pozitif)
+                    float x = (u - cx_) * depth / fx_;  // Horizontal offset
+                    float y = (v - cy_) * depth / fy_;  // Vertical offset (yükseklik)
+                    float z = depth;                    // Derinlik
+                    
+                    // Point cloud'a ekle (debug için) - Dönüştürülmüş koordinatlar
                     pcl::PointXYZ point;
-                    point.z = depth;
-                    point.x = (u - cx_) * depth / fx_;
-                    point.y = (v - cy_) * depth / fy_;
+                    point.x = z;   // Kamera Z -> Point cloud X (ileri)
+                    point.y = x;   // Kamera X -> Point cloud Y (sol/sağ) 
+                    point.z = -y;  // Kamera -Y -> Point cloud Z (yukarı)
                     
                     cloud->points.push_back(point);
                 }
             }
         }
+
+
+
+
+        // Orijinal kamera koordinat sistemi:
+                
         
         cloud->width = cloud->points.size();
         cloud->height = 1;
         cloud->is_dense = false;
+        
+        // // Apply rotation: -90 degrees pitch and 90 degrees yaw
+        // if (!cloud->points.empty()) {
+        //     Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+            
+        //     // Create rotation matrix: pitch = -90°, yaw = 90°, roll = 0°
+        //     float pitch = 0.0; // -90 degrees
+        //     float yaw = M_PI/2.0;    // 90 degrees
+        //     float roll = -M_PI/2.0;
+            
+        //     Eigen::AngleAxisf rollAngle(roll, Eigen::Vector3f::UnitX());
+        //     Eigen::AngleAxisf pitchAngle(pitch, Eigen::Vector3f::UnitY());
+        //     Eigen::AngleAxisf yawAngle(yaw, Eigen::Vector3f::UnitZ());
+            
+        //     // Apply rotations in order: yaw * pitch * roll
+        //     Eigen::Quaternionf q = yawAngle * pitchAngle * rollAngle;
+        //     transform.rotate(q);
+            
+        //     // Apply transformation to point cloud
+        //     pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+        //     pcl::transformPointCloud(*cloud, *transformed_cloud, transform);
+        //     cloud = transformed_cloud;
+        // }
         
         // Additional filtering
         if (cloud->points.size() > 5000) {
@@ -166,7 +204,7 @@ private:
 
         publisher_->publish(cloud_msg);
         
-        RCLCPP_DEBUG(this->get_logger(), "Published %zu points", cloud->points.size());
+        RCLCPP_DEBUG(this->get_logger(), "Published %zu points with rotation (pitch:-90°, yaw:90°)", cloud->points.size());
     }
 };
 

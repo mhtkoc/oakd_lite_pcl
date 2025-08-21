@@ -5,41 +5,42 @@ from launch.substitutions import LaunchConfiguration
 from launch.conditions import IfCondition
 from launch_ros.actions import Node
 pi = 3.141592653
-pi_d2=1.570796
 
 def generate_launch_description():
     return LaunchDescription([
         # Launch arguments for transform parameters
         DeclareLaunchArgument('x', default_value='0.0', description='X translation'),
         DeclareLaunchArgument('y', default_value='0.0', description='Y translation'),
-        DeclareLaunchArgument('z', default_value='-0.16', description='Z translation'),
-        DeclareLaunchArgument('roll', default_value="0.0", description='Roll rotation (radians)'),
-        DeclareLaunchArgument('pitch', default_value="0", description='Pitch rotation (radians)'),
+        DeclareLaunchArgument('z', default_value='0.0', description='Z translation'),
+        DeclareLaunchArgument('roll', default_value="-1.570796", description='Roll rotation (radians)'),
+        DeclareLaunchArgument('pitch', default_value="1.570796", description='Pitch rotation (radians)'),
         DeclareLaunchArgument('yaw', default_value='0.0', description='Yaw rotation (radians)'),
         DeclareLaunchArgument('use_rviz', default_value='false', description='Launch RViz'),
         
-        # Robot state publisher for static transform from map->oakd_link
+        # Robot state publisher for static transform from oakd_link->base_link
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
             name='static_tf_pub_oakd_base',
             arguments=[
-                '--x', LaunchConfiguration('x'),
-                '--y', LaunchConfiguration('y'), 
-                '--z', LaunchConfiguration('z'),
-                '--roll', LaunchConfiguration('roll'),
-                '--pitch', LaunchConfiguration('pitch'),
-                '--yaw', LaunchConfiguration('yaw'),
-                '--frame-id', 'oakd_link',
-                '--child-frame-id', 'map'
+                LaunchConfiguration('x'),
+                LaunchConfiguration('y'), 
+                LaunchConfiguration('z'),
+                LaunchConfiguration('roll'),
+                LaunchConfiguration('pitch'),
+                LaunchConfiguration('yaw'),
+                 
+               
+                'oakd_link',
+                 'map'
             ],
             output='screen',
         ),
         # Pointcloud node (örnek, kendi node'unu buraya ekle)
         Node(
             package='oakd_lite_pcl',
-            executable='oakd_lite_pcl',
-            name='oak_pointcloud',
+            executable='laserscan_cpp',
+            name='oak_laserscan',
             output='screen',
             parameters=[{'frame_id': 'oakd_link'}],
         ),

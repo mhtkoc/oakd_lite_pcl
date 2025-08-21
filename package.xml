@@ -17,6 +17,11 @@
   <depend>std_msgs</depend>
   <depend>pcl_conversions</depend>
   <depend>libpcl-all-dev</depend>
+  <depend>libeigen3-dev</depend>
+
+    <!-- LaserScan node için ek bağımlılıklar -->
+    <depend>opencv</depend>
+    <depend>depthai</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

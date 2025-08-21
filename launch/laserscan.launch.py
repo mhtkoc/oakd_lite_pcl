@@ -1,24 +1,23 @@
 import os
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess
+from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch.conditions import IfCondition
 from launch_ros.actions import Node
-pi = 3.141592653
-pi_d2=1.570796
 
 def generate_launch_description():
     return LaunchDescription([
         # Launch arguments for transform parameters
         DeclareLaunchArgument('x', default_value='0.0', description='X translation'),
         DeclareLaunchArgument('y', default_value='0.0', description='Y translation'),
-        DeclareLaunchArgument('z', default_value='-0.16', description='Z translation'),
-        DeclareLaunchArgument('roll', default_value="0.0", description='Roll rotation (radians)'),
-        DeclareLaunchArgument('pitch', default_value="0", description='Pitch rotation (radians)'),
+        DeclareLaunchArgument('z', default_value='0.0', description='Z translation'),
+        DeclareLaunchArgument('roll', default_value='0.0', description='Roll rotation (radians)'),
+        DeclareLaunchArgument('pitch', default_value='0.0', description='Pitch rotation (radians)'),
         DeclareLaunchArgument('yaw', default_value='0.0', description='Yaw rotation (radians)'),
         DeclareLaunchArgument('use_rviz', default_value='false', description='Launch RViz'),
+        DeclareLaunchArgument('debug', default_value='false', description='Enable debug point cloud'),
         
-        # Robot state publisher for static transform from map->oakd_link
+        # Static transform from map->oakd_link
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
@@ -30,19 +29,24 @@ def generate_launch_description():
                 '--roll', LaunchConfiguration('roll'),
                 '--pitch', LaunchConfiguration('pitch'),
                 '--yaw', LaunchConfiguration('yaw'),
-                '--frame-id', 'oakd_link',
-                '--child-frame-id', 'map'
+                '--frame-id', 'map',
+                '--child-frame-id', 'oakd_link'
             ],
             output='screen',
         ),
-        # Pointcloud node (örnek, kendi node'unu buraya ekle)
+        
+        # LaserScan node
         Node(
             package='oakd_lite_pcl',
-            executable='oakd_lite_pcl',
-            name='oak_pointcloud',
+            executable='laserscan_cpp',
+            name='oak_laserscan',
             output='screen',
-            parameters=[{'frame_id': 'oakd_link'}],
+            parameters=[
+                {'frame_id': 'oakd_link'},
+                {'debug': LaunchConfiguration('debug')}
+            ],
         ),
+        
         # İsteğe bağlı: RViz (varsayılan false)
         Node(
             package='rviz2',
@@ -50,6 +54,5 @@ def generate_launch_description():
             name='rviz2',
             output='screen',
             condition=IfCondition(LaunchConfiguration('use_rviz')),
-           # arguments=['-d', os.path.join(os.path.expanduser('~'), 'ros2_ws', 'rviz-nav2-conf.rviz')],
         ),
     ])
